@@ -1,1 +1,43 @@
+name: Deploy AWS Glue Job
 
+on:
+  push:
+    branches:
+      - main  # Or your main branch name
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload Glue job script to S3
+        run: |
+          aws s3 cp etl_script.py s3://${{ secrets.S3_BUCKET }}/glue/etl_script.py
+
+      - name: Update Glue job
+        run: |
+          aws glue update-job \
+            --name ${{ secrets.GLUE_JOB_NAME }} \
+            --job-update '{
+              "Role": "${{ secrets.IAM_ROLE_ARN }}",
+              "Command": {
+                "Name": "glueetl",
+                "ScriptLocation": "s3://${{ secrets.S3_BUCKET }}/glue/etl_script.py",
+                "PythonVersion": "3"
+              },
+              "DefaultArguments": {
+                "--job-language": "python",
+                "--TempDir": "s3://${{ secrets.S3_BUCKET }}/glue/temp/",
+                "--enable-metrics": "true"
+              }
+            }'
