@@ -22,7 +22,7 @@ jobs:
 
       - name: Upload Glue job script to S3
         run: |
-          aws s3 cp glue_job.py s3://${{ secrets.S3_BUCKET }}/glue/etl_script.py
+          aws s3 cp glue_job.py s3://${{ secrets.S3_BUCKET }}/glue/glue_job.py
 
       - name: Update Glue job
         run: |
@@ -32,7 +32,7 @@ jobs:
               "Role": "${{ secrets.IAM_ROLE_ARN }}",
               "Command": {
                 "Name": "glueetl",
-                "ScriptLocation": "s3://${{ secrets.S3_BUCKET }}/glue/etl_script.py",
+                "ScriptLocation": "s3://${{ secrets.S3_BUCKET }}/glue/glue_job.py",
                 "PythonVersion": "3"
               },
               "DefaultArguments": {
