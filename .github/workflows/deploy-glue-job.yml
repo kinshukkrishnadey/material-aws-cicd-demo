@@ -3,7 +3,7 @@ name: Deploy AWS Glue Job
 on:
   push:
     branches:
-      - main  # Or your main branch name
+      - main  # Trigger when code is pushed to main
 
 jobs:
   deploy:
@@ -23,21 +23,27 @@ jobs:
       - name: Upload Glue job script to S3
         run: |
           aws s3 cp glue_jobs/glue_job.py s3://glue-material-demo-bucket/glue_job.py
-          
+
+      - name: Create Glue job update JSON
+        run: |
+          cat <<EOF > job_update.json
+          {
+            "Role": "${{ secrets.IAM_ROLE_ARN }}",
+            "Command": {
+              "Name": "glueetl",
+              "ScriptLocation": "s3://glue-material-demo-bucket/glue_job.py",
+              "PythonVersion": "3"
+            },
+            "DefaultArguments": {
+              "--job-language": "python",
+              "--TempDir": "s3://${{ secrets.S3_BUCKET }}/glue/temp/",
+              "--enable-metrics": "true"
+            }
+          }
+          EOF
+
       - name: Update Glue job
         run: |
           aws glue update-job \
-            --name ${{ secrets.GLUE_JOB_NAME }} \
-            --job-update '{
-              "Role": "${{ secrets.IAM_ROLE_ARN }}",
-              "Command": {
-                "Name": "glueetl",
-                "ScriptLocation": "s3://glue-material-demo-bucket/glue_job.py",
-                "PythonVersion": "3"
-              },
-              "DefaultArguments": {
-                "--job-language": "python",
-                "--TempDir": "s3://${{ secrets.S3_BUCKET }}/glue/temp/",
-                "--enable-metrics": "true"
-              }
-            }'
+            --job-name "${{ secrets.GLUE_JOB_NAME }}" \
+            --job-update file://job_update.json
